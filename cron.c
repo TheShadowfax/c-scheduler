@@ -9,11 +9,10 @@
 #include "queue.h"
 #include <signal.h>
 
-
 int job_id_counter = 0;
 
 
-void submit_job(char *command, char *args, queue *job_queue);
+void submit_job(char *command, char **args, queue *job_queue);
 void print_job_status(job_t *job);
 void show_jobs(queue *job_queue);
 void print_job_history(queue *job_queue);
@@ -38,7 +37,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-void submit_job(char *program, char *args, queue *job_queue) {
+void submit_job(char *program, char **args, queue *job_queue) {
     // Create a new job struct
     job_t *job = malloc(sizeof(job_t));
     if (job == NULL) {
@@ -46,18 +45,34 @@ void submit_job(char *program, char *args, queue *job_queue) {
         return;
     }
 
-
     // Initialize the job fields
     job->job_id = job_id_counter;
+
     strcpy(job->program, program);
-    job->args = malloc(sizeof(char) * MAX_ARGS_LEN);
-    strcpy(job->args, args);
+
+    int arg_count = 0;
+    while (args[arg_count] != NULL) {
+        arg_count++;
+    }
+    job->args = (char **)malloc( arg_count+1 * sizeof(char *));
+    int pos = 0;
+    while (pos < arg_count) {
+        job->args[pos] = (char *)malloc((strlen(args[pos]) + 1) * sizeof(char));
+        strcpy(job->args[pos], args[pos]);
+        pos++;
+    }
+
     job->output_file = malloc(sizeof(char) * MAX_FILENAME_LEN);
-    snprintf(job->output_file, MAX_FILENAME_LEN, "%d.out", job_id_counter);
+    snprintf(job->output_file, MAX_FILENAME_LEN, "%d.out", job_id_counter);       
+
+
     job->error_file = malloc(sizeof(char) * MAX_FILENAME_LEN);
     snprintf(job->error_file, MAX_FILENAME_LEN, "%d.err", job_id_counter);
+
     job->pid = -1;
     job->completed = false;
+    job->status = 0;
+    
 
     // Increment the global job id counter
     job_id_counter++;
@@ -74,10 +89,10 @@ void submit_job(char *program, char *args, queue *job_queue) {
 
 void print_job_status(job_t *job) {
     printf("Job %d: ", job->job_id);
-    if (job->completed) {
-        printf("Completed\n");
+    if (job->status == 0) {
+        printf("waiting\n");
     } else {
-        printf("Running\n");
+        printf("running\n");
     }
 }
 
@@ -88,7 +103,9 @@ void show_jobs(queue *job_queue) {
 
     while (pos < job_queue->count) {
         job_t *current = queue_get(job_queue, job_queue->start);
-        print_job_status(current);
+        if (current->status != 2){
+            print_job_status(current);
+        } 
         pos++;
     }
     printf("\n");
@@ -97,6 +114,7 @@ void show_jobs(queue *job_queue) {
 
 void execute_job(job_t *job) {
     job->start_time = time(NULL);
+    job->status = 1;
     int pid = fork();
     if (pid == -1) {
         fprintf(stderr, "Error: fork failed (%s)\n", strerror(errno));
@@ -113,11 +131,8 @@ void execute_job(job_t *job) {
 
         FILE *ep = freopen(errfile, "w+", stderr);
 
-        // Set up alarm to limit execution time
-        signal(SIGALRM, SIG_DFL);
-        alarm(atoi(job->args));
 
-        if (execvp(job->program, (char * const *)job->args) == -1) {
+        if (execvp(job->program,job->args) == -1) {
             fprintf(stderr, "Error: command not found (%s)\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
@@ -133,7 +148,8 @@ void execute_job(job_t *job) {
 void print_time(long int t) {
     if (t <0) return;
     struct tm tm = *localtime(&t);
-    printf("%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    printf("%04d-%02d-%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    printf("%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
 void print_job_history(queue *job_queue) {
@@ -141,8 +157,8 @@ void print_job_history(queue *job_queue) {
     printf("jobid \t command \t starttime \t endtime \t status \n");
     int pos = 0;
     while (pos < job_queue->count) {
-        job_t *current = queue_get(job_queue, pos);
-        
+        job_t *current = queue_get(job_queue, pos++);
+        if (current->status !=2) continue;
         printf("%d \t ", current->job_id);
         printf("%s \t ", current->program);
         print_time(current->start_time);
@@ -150,10 +166,7 @@ void print_job_history(queue *job_queue) {
         print_time(current->end_time);
         printf(" \t ");
         printf("%s \n", current->status == 0 ? "waiting" : current->status == 1 ? "running": "completed");
-        // printf("%d \t %s \t %s \t %s \t %d\n", current->job_id, current->program,  ctime((const time_t *) current->start_time), ctime((const time_t *) current->end_time), current->status);
-        // printf(" %s, End Time: %s\n", ctime((const time_t *) current->start_time), ctime(
-        //         (const time_t *) current->end_time));
-        pos++;
+        
     }
     printf("\n");
 }
@@ -178,10 +191,15 @@ void execute_next_job(queue *job_queue, int p) {
         }
         job->end_time = time(NULL);
         job->completed = 1;
+        job->completed = 1;
+        job->status = 2;
         dequeue(job_queue);
         execute_next_job(job_queue, p);
     }
 }
+
+
+
 
 void run_job_scheduler(queue *job_queue, int max_jobs) {
     char command[MAX_COMMAND_LEN];
@@ -203,22 +221,26 @@ void run_job_scheduler(queue *job_queue, int max_jobs) {
         if (strncmp(command, "submithistory", 13) == 0) {
             print_job_history(job_queue);
         } else if (strncmp(command, "submit", 6) == 0) {
-            char *program = malloc(sizeof (char) * strlen(command));
             char args_str[MAX_COMMAND_LEN];
-            sscanf(command, "submit %[^\n]s", args_str); // Remove "submit " from input string
+            sscanf(command, "submit %[^\n]s", args_str);  // Remove "submit " from input string
+            char program[strlen(args_str) + 1];
             sscanf(args_str, "%s", program); // Extract program name
             if (strlen(program) > 0) {
-                char *args[MAX_ARGS_LEN];
+                char *args[MAX_ARGS_LEN] = { NULL }; // Initialize args array with NULL values
                 int arg_count = 0;
                 char *arg = strtok(args_str, " ");
-                while (arg != NULL && arg_count < 2) {
-                    args[arg_count] = arg;
+                while (arg != NULL) {
+                    if (arg_count < MAX_ARGS_LEN){
+                       args[arg_count] = malloc(strlen(arg) + 1);
+                       strcpy(args[arg_count], arg);
+                    }
                     arg_count++;
                     arg = strtok(NULL, " ");
                 }
-                submit_job(program, args[1], job_queue);
+                submit_job(program, args, job_queue);
                 job_id++;
             }
+            
         } else if (strncmp(command, "showjobs", 6) == 0) {
             show_jobs(job_queue);
         } else if (strncmp(command, "exit", 4) == 0) {
@@ -230,27 +252,27 @@ void run_job_scheduler(queue *job_queue, int max_jobs) {
         // Execute the next job if there are available cores
         execute_next_job(job_queue, running_jobs);
 
-        // Wait for any completed jobs
-        while (running_jobs >= max_jobs) {
-            int status;
-            pid_t pid = wait(&status);
+        // // Wait for any completed jobs
+        // while (running_jobs >= max_jobs) {
+        //     int status;
+        //     pid_t pid = wait(&status);
 
-            if (pid == -1) {
-                perror("wait");
-                break;
-            } else {
-                running_jobs--;
-                // Update the completed job in the queue
-                for (int i = 0; i < queue_size(job_queue); i++) {
-                    job_t *job = (job_t *) queue_get(job_queue, i);
-                    if (job->pid == pid) {
-                        job->completed = true;
-                        printf("Job %d (%s %s) completed\n", job->job_id, job->program, job->args);
-                        print_job_status(job);
-                        break;
-                    }
-                }
-            }
-        }
+        //     if (pid == -1) {
+        //         perror("wait");
+        //         break;
+        //     } else {
+        //         running_jobs--;
+        //         // Update the completed job in the queue
+        //         for (int i = 0; i < queue_size(job_queue); i++) {
+        //             job_t *job = (job_t *) queue_get(job_queue, i);
+        //             if (job->pid == pid) {
+        //                 job->completed = true;
+        //                 printf("Job %d (%s) completed\n", job->job_id, job->program);
+        //                 print_job_status(job);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // }
     }
 }

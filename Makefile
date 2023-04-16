@@ -6,14 +6,14 @@ CFLAGS = -Wall -g #replace -g with -O when not debugging
 DEPS	= queue.h Makefile
 OBJS	= queue.o cron.o
 
-EXECS	= queuetest
+EXECS	= mysched
 
 all:	$(EXECS)
 
 %.o:	%.c $(DEPS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-queuetest:	$(OBJS)
+mysched:	$(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:	

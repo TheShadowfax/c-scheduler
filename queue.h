@@ -20,7 +20,7 @@ typedef struct {
     pid_t pid;
     bool completed;
     char program[MAX_COMMAND_LEN];
-    char *args;
+    char **args;
     int arg_count;
     char *output_file;
     char *error_file;
