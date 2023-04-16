@@ -131,11 +131,15 @@ void execute_job(job_t *job) {
 
         FILE *ep = freopen(errfile, "w+", stderr);
 
+        // Set up alarm to limit execution time
+        // signal(SIGALRM, SIG_DFL);
+        // alarm(atoi(job->args));
 
         if (execvp(job->program,job->args) == -1) {
             fprintf(stderr, "Error: command not found (%s)\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
+        job->status = 1;
         fclose(op);
         fclose(ep);
         exit(0);
@@ -190,7 +194,6 @@ void execute_next_job(queue *job_queue, int p) {
             return;
         }
         job->end_time = time(NULL);
-        job->completed = 1;
         job->completed = 1;
         job->status = 2;
         dequeue(job_queue);
