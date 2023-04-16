@@ -13,7 +13,7 @@
 int job_id_counter = 0;
 
 
-void submit_job(char *command, char *args, queue *job_queue);
+void submit_job(char *command, char **args, queue *job_queue);
 void print_job_status(job_t *job);
 void show_jobs(queue *job_queue);
 void print_job_history(queue *job_queue);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-void submit_job(char *program, char *args, queue *job_queue) {
+void submit_job(char *program, char **args, queue *job_queue) {
     // Create a new job struct
     job_t *job = malloc(sizeof(job_t));
     if (job == NULL) {
@@ -50,8 +50,7 @@ void submit_job(char *program, char *args, queue *job_queue) {
     // Initialize the job fields
     job->job_id = job_id_counter;
     strcpy(job->program, program);
-    job->args = malloc(sizeof(char) * MAX_ARGS_LEN);
-    strcpy(job->args, args);
+    job->args = args;
     job->output_file = malloc(sizeof(char) * MAX_FILENAME_LEN);
     snprintf(job->output_file, MAX_FILENAME_LEN, "%d.out", job_id_counter);
     job->error_file = malloc(sizeof(char) * MAX_FILENAME_LEN);
