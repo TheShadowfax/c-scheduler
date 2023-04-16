@@ -135,6 +135,7 @@ void print_time(long int t) {
     if (t <0) return;
     struct tm tm = *localtime(&t);
     printf("%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    printf("%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
 void print_job_history(queue *job_queue) {
@@ -142,8 +143,9 @@ void print_job_history(queue *job_queue) {
     printf("jobid \t command \t starttime \t endtime \t status \n");
     int pos = 0;
     while (pos < job_queue->count) {
-        job_t *current = queue_get(job_queue, pos);
+        job_t *current = queue_get(job_queue, pos++);
         
+        if (job->status !=2) continue;
         printf("%d \t ", current->job_id);
         printf("%s \t ", current->program);
         print_time(current->start_time);
@@ -154,7 +156,7 @@ void print_job_history(queue *job_queue) {
         // printf("%d \t %s \t %s \t %s \t %d\n", current->job_id, current->program,  ctime((const time_t *) current->start_time), ctime((const time_t *) current->end_time), current->status);
         // printf(" %s, End Time: %s\n", ctime((const time_t *) current->start_time), ctime(
         //         (const time_t *) current->end_time));
-        pos++;
+        
     }
     printf("\n");
 }
