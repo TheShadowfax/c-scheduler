@@ -59,17 +59,17 @@ void submit_job(char *program, char *args, queue *job_queue) {
     job->pid = -1;
     job->completed = false;
 
-
     // Increment the global job id counter
     job_id_counter++;
 
     // Add the job to the job queue
     if (queue_insert(job_queue, job) == -1) {
+        printf("%s \n", program); 
         perror("queue_push");
         return;
     }
 
-    printf("Job %d submitted\n", job->job_id);
+    printf("Job %d added to the queue\n", job->job_id);
 }
 
 void print_job_status(job_t *job) {
@@ -110,7 +110,6 @@ void execute_job(job_t *job) {
         sprintf(errfile, "%d.err", job->job_id);
 
         FILE *op = freopen(outfile, "w+", stdout);
-        printf("asds\n");
 
         FILE *ep = freopen(errfile, "w+", stderr);
 
@@ -131,15 +130,29 @@ void execute_job(job_t *job) {
     }
 }
 
+void print_time(long int t) {
+    if (t <0) return;
+    struct tm tm = *localtime(&t);
+    printf("%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+}
+
 void print_job_history(queue *job_queue) {
     printf("Job History:\n");
-    int pos = job_queue->start;
+    printf("jobid \t command \t starttime \t endtime \t status \n");
+    int pos = 0;
     while (pos < job_queue->count) {
-        job_t *current = queue_get(job_queue, job_queue->start);
-        printf("Job ID: %d, Program: %s, Arguments: ", current->job_id, current->program);
-        printf("%s ", current->args);
-        printf(", Start Time: %s, End Time: %s\n", ctime((const time_t *) current->start_time), ctime(
-                (const time_t *) current->end_time));
+        job_t *current = queue_get(job_queue, pos);
+        
+        printf("%d \t ", current->job_id);
+        printf("%s \t ", current->program);
+        print_time(current->start_time);
+        printf(" \t ");
+        print_time(current->end_time);
+        printf(" \t ");
+        printf("%d \n", current->status);
+        // printf("%d \t %s \t %s \t %s \t %d\n", current->job_id, current->program,  ctime((const time_t *) current->start_time), ctime((const time_t *) current->end_time), current->status);
+        // printf(" %s, End Time: %s\n", ctime((const time_t *) current->start_time), ctime(
+        //         (const time_t *) current->end_time));
         pos++;
     }
     printf("\n");
@@ -187,26 +200,27 @@ void run_job_scheduler(queue *job_queue, int max_jobs) {
         command[strcspn(command, "\n")] = '\0';
 
 
-        if (strncmp(command, "submit", 6) == 0) {
+        if (strncmp(command, "submithistory", 13) == 0) {
+            print_job_history(job_queue);
+        } else if (strncmp(command, "submit", 6) == 0) {
             char *program = malloc(sizeof (char) * strlen(command));
             char args_str[MAX_COMMAND_LEN];
             sscanf(command, "submit %[^\n]s", args_str); // Remove "submit " from input string
             sscanf(args_str, "%s", program); // Extract program name
-            char *args[MAX_ARGS_LEN];
-            int arg_count = 0;
-            char *arg = strtok(args_str, " ");
-            while (arg != NULL && arg_count < 2) {
-                args[arg_count] = arg;
-                arg_count++;
-                arg = strtok(NULL, " ");
+            if (strlen(program) > 0) {
+                char *args[MAX_ARGS_LEN];
+                int arg_count = 0;
+                char *arg = strtok(args_str, " ");
+                while (arg != NULL && arg_count < 2) {
+                    args[arg_count] = arg;
+                    arg_count++;
+                    arg = strtok(NULL, " ");
+                }
+                submit_job(program, args[1], job_queue);
+                job_id++;
             }
-
-            submit_job(program, args[1], job_queue);
-            job_id++;
         } else if (strncmp(command, "showjobs", 6) == 0) {
             show_jobs(job_queue);
-        } else if (strncmp(command, "submithistory", 13) == 0) {
-            print_job_history(job_queue);
         } else if (strncmp(command, "exit", 4) == 0) {
             break; // exit loop on "exit" command
         } else {

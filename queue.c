@@ -7,11 +7,11 @@
 queue *queue_init(int n) {
 	queue *q = (queue *)malloc(sizeof(queue));
 	q->size = n;
-	q->buffer = malloc(sizeof(int)*n);
+	q->buffer = malloc(sizeof(job_t)*n);
 	q->start = 0;
 	q->end = 0;
 	q->count = 0;
-
+	
 	return q;
 }
 
@@ -20,7 +20,7 @@ queue *queue_init(int n) {
 int queue_insert(queue *q, job_t* item) {
 	if ((q == NULL) || (q->count == q->size))
 	   return -1;
-
+	
 	q->buffer[q->end % q->size] = *item;
 	q->end = (q->end + 1) % q->size;
 	q->count++;
@@ -36,7 +36,7 @@ void dequeue(queue *q) {
 
 //	job_t x = q->buffer[q->start];
 	q->start = (q->start + 1) % q->size;
-	q->count--;
+	// q->count--;
 
 }
 
@@ -72,5 +72,5 @@ job_t *queue_get(queue* q, int pos){
 
 /* get the item at a position */
 job_t *peek(queue* q){
-    return queue_get(q, 0);
+    return queue_get(q, q->start);
 }

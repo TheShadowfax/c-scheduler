@@ -11,7 +11,7 @@
 #define MAX_COMMAND_LEN 10000
 #define MAX_ARGS_LEN 100
 #define MAX_RUNNING_JOBS 4 // maximum number of jobs allowed to run in parallel
-#define MAX_JOBS_IN_QUEUE (2147483647-1)
+#define MAX_JOBS_IN_QUEUE (256)
 #define MAX_FILENAME_LEN 256
 
 
