@@ -114,8 +114,8 @@ void execute_job(job_t *job) {
         FILE *ep = freopen(errfile, "w+", stderr);
 
         // Set up alarm to limit execution time
-        signal(SIGALRM, SIG_DFL);
-        alarm(atoi(job->args));
+        // signal(SIGALRM, SIG_DFL);
+        // alarm(atoi(job->args));
 
         if (execvp(job->program, (char * const *)job->args) == -1) {
             fprintf(stderr, "Error: command not found (%s)\n", strerror(errno));
@@ -215,12 +215,12 @@ void run_job_scheduler(queue *job_queue, int max_jobs) {
                 char *args[MAX_ARGS_LEN];
                 int arg_count = 0;
                 char *arg = strtok(args_str, " ");
-                while (arg != NULL && arg_count < 2) {
+                while (arg != NULL) {
                     args[arg_count] = arg;
                     arg_count++;
                     arg = strtok(NULL, " ");
                 }
-                submit_job(program, args[1], job_queue);
+                submit_job(program, args, job_queue);
                 job_id++;
             }
         } else if (strncmp(command, "showjobs", 6) == 0) {
