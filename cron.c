@@ -121,6 +121,7 @@ void execute_job(job_t *job) {
             fprintf(stderr, "Error: command not found (%s)\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
+        job->status = 1;
         fclose(op);
         fclose(ep);
         exit(0);
@@ -178,6 +179,7 @@ void execute_next_job(queue *job_queue, int p) {
         }
         job->end_time = time(NULL);
         job->completed = 1;
+        job->status = 2;
         dequeue(job_queue);
         execute_next_job(job_queue, p);
     }
