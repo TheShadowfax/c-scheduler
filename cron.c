@@ -149,7 +149,7 @@ void print_job_history(queue *job_queue) {
         printf(" \t ");
         print_time(current->end_time);
         printf(" \t ");
-        printf("%d \n", current->status);
+        printf("%s \n", current->status == 0 ? "waiting" : current->status == 1 ? "running": "completed");
         // printf("%d \t %s \t %s \t %s \t %d\n", current->job_id, current->program,  ctime((const time_t *) current->start_time), ctime((const time_t *) current->end_time), current->status);
         // printf(" %s, End Time: %s\n", ctime((const time_t *) current->start_time), ctime(
         //         (const time_t *) current->end_time));
