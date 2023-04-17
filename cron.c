@@ -99,12 +99,13 @@ void print_job_status(job_t *job) {
 void show_jobs(queue *job_queue) {
     printf("Job Queue:\n");
 
-    int pos = job_queue->start;
+    printf("jobid \t command \t status\n");
+    int pos = 0;
 
     while (pos < job_queue->count) {
-        job_t *current = queue_get(job_queue, job_queue->start);
-        if (current->status != 2){
-            print_job_status(current);
+        job_t *current = queue_get(job_queue, pos);
+        if (current->program && current->status != 2){
+            printf("%d \t %s \t %s\n", current->job_id, current->program, current->status == 0? "waiting" :"running");
         } 
         pos++;
     }
